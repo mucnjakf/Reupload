@@ -1,0 +1,199 @@
+﻿@page "/"
+
+<PageTitle>Reupload - Home</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+        <h1>Welcome to Reupload</h1>
+
+        <hr class="mt-1 mb-3"/>
+
+        <div class="row">
+            <div class="input-group" style="width: 30rem;">
+                <span class="input-group-text">
+                    <i class="oi oi-magnifying-glass"></i>
+                </span>
+                <input type="text" class="form-control" placeholder="Search by author or hashtag" @bind="SearchQuery" @bind:event="oninput">
+                <button class="btn btn-primary" type="button" @onclick="SearchAsync">
+                    Search
+                </button>
+                <button class="btn btn-danger"
+                        type="button"
+                        @onclick="ClearSearchAsync"
+                        disabled="@BtnSearchDisabled">
+                    <i class="oi oi-x"></i>
+                </button>
+            </div>
+        </div>
+
+        @if (Posts is not null)
+        {
+            if (Posts.Any())
+            {
+                foreach (PostDetailsVm post in Posts)
+                {
+                    <div class="column">
+                        <div class="card">
+                            <img src="@post.ImageUri" class="m-0" alt="Post" style="height: 400px; object-fit: cover;">
+
+                            <div class="card-body">
+                                <p class="card-text">
+                                    @post.Description
+                                </p>
+
+                                <div class="p-0 border-top">
+                                    <div class="d-flex justify-content-between my-2">
+                                        <span>@post.User.FirstName @post.User.LastName</span>
+                                        <span>@post.CreatedAt.Date.ToString("MMM dd, yyyy.")</span>
+                                    </div>
+                                    <div class="border-top pt-2">
+                                        @if (post.Hashtags is not null)
+                                        {
+                                            foreach (PostHashtagVm hashtag in post.Hashtags)
+                                            {
+                                                <span class="badge bg-primary mx-1">#@hashtag.Text</span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-footer">
+                                <div class="row p-0">
+                                    <div class="col d-grid">
+                                        <button class="btn btn-primary" @onclick="() => OpenImageModal(post.ImageUri)">Show</button>
+                                    </div>
+                                    <div class="col d-grid">
+                                        <button class="btn btn-secondary" @onclick="() => DownloadPostImageAsync(post.User.Id, post.Id)">Download</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <hr class="mt-3 mb-1"/>
+
+                <Pagination Metadata="@PaginationMetadata" Spread="2" SelectedPage="@SelectedPageAsync"/>
+            }
+            else
+            {
+                <h3 class="text-center">No posts found</h3>
+            }
+        }
+    </div>
+</div>
+
+@code {
+
+    [Inject]
+    private IPostApiService PostApiService { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = default!;
+
+    [CascadingParameter]
+    private IModalService ModalService { get; set; } = default!;
+
+    private PaginationRequestDto PaginationRequestDto { get; } = new();
+
+    private List<PostDetailsVm>? Posts { get; set; }
+
+    private PaginationMetadata? PaginationMetadata { get; set; }
+
+    private bool BtnSearchDisabled { get; set; } = true;
+
+    private string _searchQuery = string.Empty;
+
+    private string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            _searchQuery = value;
+            BtnSearchDisabled = _searchQuery.Length <= 0;
+        }
+    }
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetPaginatedAsync();
+    }
+
+    private async Task GetPaginatedAsync()
+    {
+        ShowErrors = false;
+        Errors.Clear();
+
+        ResultResponseVm<PaginationResponseDto<PostDetailsVm>> result = await PostApiService
+            .GetPaginatedDetailsAsync(PaginationRequestDto);
+
+        if (result.Success)
+        {
+            PaginationResponseDto<PostDetailsVm> paginationResponseDto = result.ObjectResult;
+
+            Posts = paginationResponseDto.Items;
+            PaginationMetadata = paginationResponseDto.Metadata;
+
+            return;
+        }
+
+        Posts = new List<PostDetailsVm>();
+        Errors.AddRange(result.Errors);
+        ShowErrors = false;
+    }
+
+    private async Task SelectedPageAsync(int page)
+    {
+        Posts = null;
+
+        PaginationRequestDto.PageNumber = page;
+        await GetPaginatedAsync();
+    }
+
+    private void OpenImageModal(string imageUri)
+    {
+        ModalService.Show<ImageModal>(
+            string.Empty,
+            new ModalParameters()
+                .Add(nameof(ImageModal.ImageUri), imageUri));
+    }
+
+    private async Task DownloadPostImageAsync(string userId, Guid postId)
+    {
+        Tuple<Stream, string>? imageStream = await PostApiService.GetPostImageAsync(userId, postId);
+
+        if (imageStream is null)
+        {
+            return;
+        }
+
+        using DotNetStreamReference streamReference = new(imageStream.Item1);
+
+        string fileExtension = FileExtensionHelpers.GetFileExtension(imageStream.Item2);
+
+        await JsRuntime.InvokeVoidAsync("downloadPostImageFromStream", $"{postId}.{fileExtension}", streamReference);
+    }
+
+    private async Task SearchAsync()
+    {
+        PaginationRequestDto.PageNumber = 1;
+        PaginationRequestDto.SearchQuery = SearchQuery;
+        await GetPaginatedAsync();
+    }
+
+    private async Task ClearSearchAsync()
+    {
+        SearchQuery = string.Empty;
+        PaginationRequestDto.PageNumber = 1;
+        PaginationRequestDto.SearchQuery = string.Empty;
+        await GetPaginatedAsync();
+    }
+
+}

@@ -1,0 +1,60 @@
+﻿<div class="container">
+    <h3>Delete post</h3>
+    <hr/>
+
+    <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+    <div class="row mb-3">
+        <img src="@ImageUri" style="height: 400px; object-fit: cover;" alt="Uploaded image"/>
+    </div>
+
+    <div class="row mb-3">
+        <h5 class="m-0">Are you sure you want to delete this post?</h5>
+    </div>
+
+    <hr/>
+    <button class="btn btn-danger" type="button" @onclick="DeleteAsync">Delete</button>
+    <button class="btn btn-secondary" type="button" @onclick="CancelAsync">Cancel</button>
+</div>
+
+@code {
+
+    [Inject]
+    public IPostApiService PostApiService { get; set; } = default!;
+
+    [CascadingParameter]
+    private BlazoredModalInstance BlazoredModalInstance { get; set; } = default!;
+
+    [Parameter]
+    public Guid PostId { get; set; }
+
+    [Parameter]
+    public string ImageUri { get; set; } = default!;
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    private async Task DeleteAsync()
+    {
+        ShowErrors = true;
+        Errors.Clear();
+
+        EmptyResponseVm emptyResponseVm = await PostApiService.DeleteAsync(PostId);
+
+        if (emptyResponseVm.Success)
+        {
+            await BlazoredModalInstance.CloseAsync();
+            return;
+        }
+
+        ShowErrors = true;
+        Errors.AddRange(emptyResponseVm.Errors);
+    }
+
+    private async Task CancelAsync()
+    {
+        await BlazoredModalInstance.CancelAsync();
+    }
+
+}

@@ -1,0 +1,97 @@
+﻿<div class="container">
+    <h3>Update user</h3>
+    <hr/>
+
+    <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+    <EditForm Model="@UserUpdateVm" OnValidSubmit="@UpdateAsync">
+        <div class="row mb-3">
+            <div class="col">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="txtUsername" placeholder="Username" @bind="UserUpdateVm.Username"/>
+                    <label for="txtUsername">Username</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="txtEmail" placeholder="Email" @bind="UserUpdateVm.Email"/>
+                    <label for="txtEmail">Email</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="txtFirstName" placeholder="First name" @bind="UserUpdateVm.FirstName"/>
+                    <label for="txtFirstName">First name</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="txtLastName" placeholder="Last name" @bind="UserUpdateVm.LastName"/>
+                    <label for="txtLastName">Last name</label>
+                </div>
+            </div>
+        </div>
+
+        <hr/>
+        <button class="btn btn-primary" type="submit">Confirm</button>
+        <button class="btn btn-secondary" type="button" @onclick="CancelAsync">Cancel</button>
+    </EditForm>
+</div>
+
+@code {
+
+    [Inject]
+    private IUserApiService UserApiService { get; set; } = default!;
+
+    [CascadingParameter]
+    private BlazoredModalInstance BlazoredModalInstance { get; set; } = default!;
+
+    [Parameter]
+    public UserDetailsVm User { get; set; } = default!;
+
+    private UserUpdateVm UserUpdateVm { get; set; } = new();
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    protected override void OnInitialized()
+    {
+        UserUpdateVm.Username = User.Username;
+        UserUpdateVm.Email = User.Email;
+        UserUpdateVm.FirstName = User.FirstName;
+        UserUpdateVm.LastName = User.LastName;
+    }
+
+    private async Task UpdateAsync()
+    {
+        ShowErrors = true;
+        Errors.Clear();
+
+        EmptyResponseVm emptyResponseVm = await UserApiService.UpdateAsync(User.Id, UserUpdateVm);
+
+        if (emptyResponseVm.Success)
+        {
+            await BlazoredModalInstance.CloseAsync();
+            return;
+        }
+
+        ShowErrors = true;
+        Errors.AddRange(emptyResponseVm.Errors);
+    }
+
+    private async Task CancelAsync()
+    {
+        await BlazoredModalInstance.CancelAsync();
+    }
+
+}

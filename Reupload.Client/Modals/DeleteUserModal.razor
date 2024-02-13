@@ -1,0 +1,54 @@
+﻿<div class="container">
+    <h3>Delete user</h3>
+    <hr/>
+
+    <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+    <div class="row mb-3">
+        <h5 class="m-0">Are you sure you want to delete @UserUsername?</h5>
+    </div>
+
+    <hr/>
+    <button class="btn btn-danger" type="button" @onclick="DeleteAsync">Delete</button>
+    <button class="btn btn-secondary" type="button" @onclick="CancelAsync">Cancel</button>
+</div>
+
+@code {
+    [Inject]
+    public IUserApiService UserApiService { get; set; } = default!;
+
+    [CascadingParameter]
+    private BlazoredModalInstance BlazoredModalInstance { get; set; } = default!;
+
+    [Parameter]
+    public string UserId { get; set; } = default!;
+
+    [Parameter]
+    public string UserUsername { get; set; } = default!;
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    private async Task DeleteAsync()
+    {
+        ShowErrors = true;
+        Errors.Clear();
+
+        EmptyResponseVm emptyResponseVm = await UserApiService.DeleteAsync(UserId);
+
+        if (emptyResponseVm.Success)
+        {
+            await BlazoredModalInstance.CloseAsync();
+            return;
+        }
+
+        ShowErrors = true;
+        Errors.AddRange(emptyResponseVm.Errors);
+    }
+
+    private async Task CancelAsync()
+    {
+        await BlazoredModalInstance.CancelAsync();
+    }
+}

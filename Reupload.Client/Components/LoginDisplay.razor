@@ -1,0 +1,91 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+<div class="top-row px-4 bg-dark d-flex justify-content-between align-items-center" style="height: 4rem;">
+    <div class="d-flex align-items-center">
+        <div class="border-end">
+            <img src="images/reupload.png" class="mx-3" alt="Reupload logo" style="height: 2rem;"/>
+            <a class="navbar-brand p-0 text-white" href="/" style="margin-top: 3rem;">Reupload</a>
+        </div>
+
+        <div class="nav-item" style="margin: 0 5px 0 2rem;">
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                Home
+            </NavLink>
+        </div>
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item" style="margin: 0 5px 0 5px;">
+                    <NavLink class="nav-link" href="/profile" Match="NavLinkMatch.All">
+                        Profile
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@Roles.Admin">
+            <Authorized>
+                <div class="nav-item" style="margin: 0 5px 0 5px;">
+                    <NavLink class="nav-link" href="/management" Match="NavLinkMatch.All">
+                        Management
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div>
+        <AuthorizeView>
+            <Authorized>
+                <div>
+                    <a style="min-width: 16rem;"
+                       class="btn btn-primary align-items-center text-center"
+                       role="button"
+                       href="authentication/profile">
+                        @context.User.Identity?.Name
+                    </a>
+
+                    <a style="min-width: 8rem;"
+                       class="btn btn-danger align-items-center text-center"
+                       role="button"
+                       @onclick="BeginSignOut">
+                        Logout
+                    </a>
+                </div>
+            </Authorized>
+
+            <NotAuthorized>
+                <div class="float-end">
+                    <a style="min-width: 8rem;"
+                       class="btn btn-secondary align-items-center text-center"
+                       role="button"
+                       href="authentication/register">
+                        Register
+                    </a>
+                    <a style="min-width: 8rem;"
+                       class="btn btn-primary align-items-center text-center"
+                       role="button"
+                       href="authentication/login">
+                        Login
+                    </a>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</div>
+
+@code {
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+
+    [Inject]
+    private SignOutSessionStateManager SignOutManager { get; set; } = default!;
+
+    private async Task BeginSignOut(MouseEventArgs args)
+    {
+        await SignOutManager.SetSignOutState();
+        Navigation.NavigateTo("authentication/logout");
+    }
+
+}

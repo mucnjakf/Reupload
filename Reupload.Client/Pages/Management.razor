@@ -1,0 +1,218 @@
+﻿@page "/management"
+
+@attribute [Authorize(Roles = Roles.Admin)]
+
+<PageTitle>Reupload - Management</PageTitle>
+
+<div class="container-fluid">
+    <div class="row justify-content-center mt-3">
+        <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+        <div class="row">
+            <div class="col-6 border-end">
+                <h1>Users</h1>
+
+                <hr class="mt-1 mb-3"/>
+
+                @if (Users is not null)
+                {
+                    @if (Users.Any())
+                    {
+                        <table class="table table-striped table-hover table-bordered text-center">
+                            <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Full name</th>
+                                <th>Package</th>
+                                <th># of posts</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody class="align-middle">
+
+                            @foreach (UserTableVm user in Users)
+                            {
+                                <tr>
+                                    <td>@user.Username</td>
+                                    <td>@user.Fullname</td>
+                                    <td>@user.Package</td>
+                                    <td>@user.PostsCount</td>
+                                    <td>
+                                        <button class="btn btn-primary" @onclick="() => OpenUserProfile(user.Id)">
+                                            <span class="oi oi-external-link"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+
+                        <Pagination Metadata="@UsersPaginationMetadata" Spread="2" SelectedPage="@SelectedPageUsersAsync"/>
+                    }
+                    else
+                    {
+                        <h3 class="text-center">No users found</h3>
+                    }
+                }
+                <hr/>
+            </div>
+
+            <div class="col-6 border-start">
+                <h1>User Actions</h1>
+
+                <hr class="mt-1 mb-3"/>
+
+                @if (UserActions is not null)
+                {
+                    @if (UserActions.Any())
+                    {
+                        <table class="table table-striped table-hover table-bordered text-center">
+                            <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Full name</th>
+                                <th>Timestamp</th>
+                                <th>Action</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody class="align-middle">
+
+                            @foreach (UserActionTableVm userAction in UserActions)
+                            {
+                                <tr>
+                                    <td>@userAction.UserUsername</td>
+                                    <td>@userAction.UserFullname</td>
+                                    <td>@userAction.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    <td>@Regex.Replace(@userAction.ActionType.ToString(), "(\\B[A-Z])", " $1")</td>
+                                    <td>
+                                        <button class="btn btn-primary" @onclick="() => OpenUserAction(userAction.Id)">
+                                            <span class="oi oi-external-link"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+
+                        <Pagination Metadata="@UserActionsPaginationMetadata" Spread="2" SelectedPage="@SelectedPageUserActionsAsync"/>
+                    }
+                    else
+                    {
+                        <h3 class="text-center">No user actions found</h3>
+                    }
+                }
+                <hr/>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Inject]
+    private IUserApiService UserApiService { get; set; } = default!;
+
+    [Inject]
+    private IUserActionApiService UserActionApiService { get; set; } = default!;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
+    private PaginationRequestDto UsersPaginationRequestDto { get; } = new()
+    {
+        PageSize = 10
+    };
+
+    private PaginationRequestDto UserActionsPaginationRequestDto { get; } = new()
+    {
+        PageSize = 10
+    };
+
+    private List<UserTableVm>? Users { get; set; }
+
+    private PaginationMetadata? UsersPaginationMetadata { get; set; }
+
+    private PaginationMetadata? UserActionsPaginationMetadata { get; set; }
+
+    private List<UserActionTableVm>? UserActions { get; set; }
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUsersPaginatedTableAsync();
+        await GetUserActionsPaginatedTableAsync();
+    }
+
+    private async Task GetUsersPaginatedTableAsync()
+    {
+        ShowErrors = false;
+        Errors.Clear();
+
+        ResultResponseVm<PaginationResponseDto<UserTableVm>> result = await UserApiService
+            .GetPaginatedTableAsync(UsersPaginationRequestDto);
+
+        if (result.Success)
+        {
+            PaginationResponseDto<UserTableVm> paginationResponseDto = result.ObjectResult;
+
+            Users = paginationResponseDto.Items;
+            UsersPaginationMetadata = paginationResponseDto.Metadata;
+
+            return;
+        }
+
+        Users = new List<UserTableVm>();
+        Errors.AddRange(result.Errors);
+        ShowErrors = false;
+    }
+
+    private async Task GetUserActionsPaginatedTableAsync()
+    {
+        ShowErrors = false;
+        Errors.Clear();
+
+        ResultResponseVm<PaginationResponseDto<UserActionTableVm>> result = await UserActionApiService
+            .GetPaginatedTableAsync(UserActionsPaginationRequestDto);
+
+        if (result.Success)
+        {
+            PaginationResponseDto<UserActionTableVm> paginationResponseDto = result.ObjectResult;
+
+            UserActions = paginationResponseDto.Items;
+            UserActionsPaginationMetadata = paginationResponseDto.Metadata;
+
+            return;
+        }
+
+        UserActions = new List<UserActionTableVm>();
+        Errors.AddRange(result.Errors);
+        ShowErrors = false;
+    }
+
+    private async Task SelectedPageUsersAsync(int page)
+    {
+        UsersPaginationRequestDto.PageNumber = page;
+        await GetUsersPaginatedTableAsync();
+    }
+
+    private async Task SelectedPageUserActionsAsync(int page)
+    {
+        UserActionsPaginationRequestDto.PageNumber = page;
+        await GetUserActionsPaginatedTableAsync();
+    }
+
+    private void OpenUserProfile(string userId)
+    {
+        NavigationManager.NavigateTo($"/management/profile/{userId}");
+    }
+
+    private void OpenUserAction(Guid userActionId)
+    {
+        NavigationManager.NavigateTo($"/management/user-actions/{userActionId}");
+    }
+
+}

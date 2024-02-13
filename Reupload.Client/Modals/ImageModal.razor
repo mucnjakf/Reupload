@@ -1,0 +1,19 @@
+﻿<div class="position-relative">
+    <img src="@ImageUri" alt="Image" style="max-height: 800px; object-fit: cover;"/>
+    <button class="btn btn-danger position-absolute top-0 start-0 m-3" @onclick="CloseAsync">Close</button>
+</div>
+
+@code {
+
+    [CascadingParameter]
+    private BlazoredModalInstance BlazoredModalInstance { get; set; } = default!;
+
+    [Parameter]
+    public string? ImageUri { get; set; }
+
+    private async Task CloseAsync()
+    {
+        await BlazoredModalInstance.CloseAsync();
+    }
+
+}

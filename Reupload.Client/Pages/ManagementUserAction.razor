@@ -1,0 +1,111 @@
+﻿@page "/management/user-actions/{userActionId}"
+
+@attribute [Authorize(Roles = Roles.Admin)]
+
+<PageTitle>Reupload - Management User Action</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>User Action Management</h1>
+
+            <div>
+                <a class="btn btn-primary" href="/management/profile/@UserAction?.User.Id">User profile</a>
+            </div>
+        </div>
+
+        <hr class="mt-1 mb-3"/>
+
+        <div class="mb-2">
+            <h6 class="text-muted">ID</h6>
+            <h5 class="fw-bold">@UserActionId</h5>
+        </div>
+
+        @if (UserAction is not null)
+        {
+            <div class="row">
+                <div class="col">
+                    <div class="row">
+                        <h6 class="text-muted">Username</h6>
+                        <h5 class="fw-bold">@UserAction.User.Username</h5>
+                    </div>
+                    <div class="row">
+                        <h6 class="text-muted">Email</h6>
+                        <h5 class="fw-bold">@UserAction.User.Email</h5>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="row">
+                        <h6 class="text-muted">First name</h6>
+                        <h5 class="fw-bold">@UserAction.User.FirstName</h5>
+                    </div>
+                    <div class="row">
+                        <h6 class="text-muted">Last name</h6>
+                        <h5 class="fw-bold">@UserAction.User.LastName</h5>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="row">
+                        <h6 class="text-muted">Timestamp</h6>
+                        <h5 class="fw-bold">@UserAction.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</h5>
+                    </div>
+                    <div class="row">
+                        <h6 class="text-muted">Action</h6>
+                        <h5 class="fw-bold">@Regex.Replace(UserAction.ActionType.ToString(), "(\\B[A-Z])", " $1")</h5>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <h6 class="text-muted">User action parameters JSON</h6>
+                <h5 class="fw-bold">
+                    <pre>@UserAction.ActionParametersJson</pre>
+                </h5>
+            </div>
+        }
+        <hr class="mt-1 mb-3"/>
+    </div>
+</div>
+
+@code {
+
+    [Inject]
+    private IUserActionApiService UserActionApiService { get; set; } = default!;
+
+    [Parameter]
+    public string UserActionId { get; set; } = default!;
+
+    private UserActionDetailsVm? UserAction { get; set; }
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUserActionDetailsAsync();
+    }
+
+    private async Task GetUserActionDetailsAsync()
+    {
+        ShowErrors = false;
+        Errors.Clear();
+
+        ResultResponseVm<UserActionDetailsVm> result = await UserActionApiService.GetDetailsAsync(Guid.Parse(UserActionId));
+
+        if (result.Success)
+        {
+            UserAction = result.ObjectResult;
+            return;
+        }
+
+        UserAction = new UserActionDetailsVm();
+        Errors.AddRange(result.Errors);
+        ShowErrors = false;
+    }
+
+}

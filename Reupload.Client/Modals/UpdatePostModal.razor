@@ -1,0 +1,122 @@
+﻿<div class="container">
+    <h3>Update post</h3>
+    <hr/>
+
+    <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+    <EditForm Model="@PostUpdateVm" OnValidSubmit="@UpdateAsync">
+        <div class="row mb-3">
+            <img src="@Post.ImageUri" style="height: 400px; object-fit: cover;" alt="Uploaded image"/>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col px-0">
+                <div class="form-floating">
+                    <InputTextArea type="text" class="form-control" id="txtDescription" placeholder="Description" @bind-Value="@PostUpdateVm.Description"/>
+                    <label for="txtDescription">Description</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-1 d-flex">
+            @foreach (string hashtag in Hashtags)
+            {
+                <span class="badge bg-primary mx-1 mb-1" style="width: 5rem; cursor: pointer;" @onclick="() => RemoveHashtag(hashtag)">#@hashtag</span>
+            }
+
+            @if (Hashtags.Any())
+            {
+                <p class="text-danger small p-0 mt-1 mb-0">Click on the hashtag badge to delete.</p>
+            }
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-10 px-0">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="txtHashtag" placeholder="Hashtag" @bind="Hashtag"/>
+                    <label for="txtHashtag">Hashtag</label>
+                </div>
+            </div>
+            <div class="col-2" style="padding-right: 0">
+                <button type="button" class="btn btn-primary h-100 w-100" @onclick="AddHashtag">Add</button>
+            </div>
+        </div>
+
+        <hr/>
+        <button class="btn btn-primary" type="submit">Confirm</button>
+        <button class="btn btn-secondary" type="button" @onclick="CancelAsync">Cancel</button>
+    </EditForm>
+</div>
+
+@code {
+
+    [Inject]
+    public IPostApiService PostApiService { get; set; } = default!;
+
+    [CascadingParameter]
+    private BlazoredModalInstance BlazoredModalInstance { get; set; } = default!;
+
+    [Parameter]
+    public UserPostVm Post { get; set; } = default!;
+
+    private PostUpdateVm PostUpdateVm { get; set; } = new();
+
+    private string? Hashtag { get; set; }
+
+    private List<string> Hashtags { get; set; } = new();
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    protected override void OnInitialized()
+    {
+        PostUpdateVm.Description = Post.Description;
+
+        if (Post.Hashtags is not null)
+        {
+            Hashtags.AddRange(Post.Hashtags.Select(x => x.Text).ToList());
+        }
+    }
+
+    private void AddHashtag()
+    {
+        if (!string.IsNullOrWhiteSpace(Hashtag))
+        {
+            Hashtags.Add(Hashtag);
+            Hashtag = null;
+        }
+    }
+
+    private void RemoveHashtag(string hashtag)
+    {
+        Hashtags.Remove(hashtag);
+    }
+
+    private async Task UpdateAsync()
+    {
+        PostUpdateVm.Hashtags = Hashtags
+            .Select(hashtag => new PostHashtagVm { Text = hashtag })
+            .ToList();
+
+        ShowErrors = true;
+        Errors.Clear();
+
+        EmptyResponseVm emptyResponseVm = await PostApiService.UpdateAsync(Post.Id, PostUpdateVm);
+
+        if (emptyResponseVm.Success)
+        {
+            await BlazoredModalInstance.CloseAsync();
+            return;
+        }
+
+        ShowErrors = true;
+        Errors.AddRange(emptyResponseVm.Errors);
+    }
+
+    private async Task CancelAsync()
+    {
+        await BlazoredModalInstance.CancelAsync();
+    }
+
+}

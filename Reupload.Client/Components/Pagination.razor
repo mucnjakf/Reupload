@@ -1,0 +1,76 @@
+﻿<div class="d-flex justify-content-between my-3 text-dark px-0">
+    <div class="d-flex">
+        <div class="card d-flex justify-content-center px-3" style="margin-right: 2rem;">
+            Pages: @Metadata.TotalPages
+        </div>
+
+        <div class="card d-flex justify-content-center px-3">
+            Count: @Metadata.TotalCount
+        </div>
+    </div>
+
+    <nav>
+        <ul class="pagination m-0">
+            @foreach (PagingLink pageLink in _pagingLinks)
+            {
+                <li class="page-item @(pageLink.Enabled ? null : "disabled") @(pageLink.Active ? "active" : null)"
+                    @onclick="() => OnSelectedPageAsync(pageLink)"
+                    style="cursor: pointer;">
+                    <span class="page-link" href="#">@((MarkupString)pageLink.Text)</span>
+                </li>
+            }
+        </ul>
+    </nav>
+</div>
+
+@code {
+
+    [Parameter]
+    public PaginationMetadata Metadata { get; set; } = default!;
+
+    [Parameter]
+    public int Spread { get; set; }
+
+    [Parameter]
+    public EventCallback<int> SelectedPage { get; set; }
+
+    private List<PagingLink> _pagingLinks = default!;
+
+        private const string PreviousIcon = "<i class=\"oi oi-caret-left\"></i>";
+
+        private const string NextIcon = "<i class=\"oi oi-caret-right\"></i>";
+
+    protected override void OnParametersSet()
+    {
+        CreatePaginationLinks();
+    }
+
+    private void CreatePaginationLinks()
+    {
+        _pagingLinks = new List<PagingLink>();
+
+        _pagingLinks.Add(new PagingLink(Metadata.CurrentPage - 1, Metadata.HasPrevious, PreviousIcon));
+
+        for (int i = 1; i <= Metadata.TotalPages; i++)
+        {
+            if (i >= Metadata.CurrentPage - Spread && i <= Metadata.CurrentPage + Spread)
+            {
+                _pagingLinks.Add(new PagingLink(i, true, i.ToString()) { Active = Metadata.CurrentPage == i });
+            }
+        }
+
+        _pagingLinks.Add(new PagingLink(Metadata.CurrentPage + 1, Metadata.HasNext, NextIcon));
+    }
+
+    private async Task OnSelectedPageAsync(PagingLink pagingLink)
+    {
+        if (pagingLink.Page == Metadata.CurrentPage || !pagingLink.Enabled)
+        {
+            return;
+        }
+
+        Metadata.CurrentPage = pagingLink.Page;
+        await SelectedPage.InvokeAsync(pagingLink.Page);
+    }
+
+}

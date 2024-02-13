@@ -1,0 +1,116 @@
+﻿<div class="container">
+    <h3>Change package</h3>
+    <hr/>
+
+    <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+    <div class="row">
+        <div class="col-6">
+            <h6 class="text-muted">Current package:</h6>
+            <h5 class="fw-bold mb-3">@UserPackage.Name</h5>
+
+            <h6 class="text-muted">Current price:</h6>
+            <h5 class="fw-bold">@UserPackage.Price</h5>
+        </div>
+
+        <div class="col-6">
+            <h6 class="text-muted">Select package:</h6>
+
+            <div class="form-floating">
+                <select class="form-select" id="selectPackage" @bind="PackageId">
+                    @if (Packages is not null)
+                    {
+                        @foreach (PackageDetailsVm package in Packages)
+                        {
+                            <option value="@package.Id">@package.Name - @package.Price</option>
+                        }
+                    }
+                </select>
+                <label for="selectPackage" class="text-muted">Packages</label>
+            </div>
+        </div>
+    </div>
+
+    <hr/>
+    <button class="btn btn-primary" @onclick="ChangePackageAsync">Confirm</button>
+    <button class="btn btn-secondary" @onclick="CancelAsync">Cancel</button>
+</div>
+
+@code {
+
+    [Inject]
+    private IPackageApiService PackageApiService { get; set; } = default!;
+
+    [Inject]
+    private IUserApiService UserApiService { get; set; } = default!;
+
+    [CascadingParameter]
+    private BlazoredModalInstance BlazoredModalInstance { get; set; } = default!;
+
+    [Parameter]
+    public string UserId { get; set; } = default!;
+
+    [Parameter]
+    public UserPackageVm UserPackage { get; set; } = default!;
+
+    IEnumerable<PackageDetailsVm>? Packages { get; set; }
+
+    private Guid PackageId { get; set; }
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetAllDetailsAsync();
+    }
+
+    private async Task GetAllDetailsAsync()
+    {
+        ShowErrors = false;
+        Errors.Clear();
+
+        ResultResponseVm<IEnumerable<PackageDetailsVm>> result = await PackageApiService
+            .GetAllDetailsAsync();
+
+        if (result.Success)
+        {
+            Packages = result.ObjectResult;
+            return;
+        }
+
+        Packages = new List<PackageDetailsVm>();
+        Errors.AddRange(result.Errors);
+        ShowErrors = false;
+    }
+
+    protected override void OnParametersSet()
+    {
+        PackageId = UserPackage.Id;
+    }
+
+    private async Task ChangePackageAsync()
+    {
+        ShowErrors = true;
+        Errors.Clear();
+
+        EmptyResponseVm emptyResponseVm = await UserApiService
+            .UpdateUserPackageAsync(new UserChangePackageVm { UserId = UserId, PackageId = PackageId });
+
+        if (emptyResponseVm.Success)
+        {
+            await BlazoredModalInstance.CloseAsync();
+            return;
+        }
+
+        ShowErrors = true;
+        Errors.AddRange(emptyResponseVm.Errors);
+    }
+
+    private async Task CancelAsync()
+    {
+        await BlazoredModalInstance.CancelAsync();
+    }
+
+}

@@ -1,0 +1,310 @@
+﻿@page "/profile"
+
+@attribute [Authorize]
+
+<PageTitle>Reupload - Profile</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <Error ShowErrors="ShowErrors" Errors="Errors"/>
+
+        @if (User is not null && !User.PackageIsActive)
+        {
+            <div class="alert alert-primary" role="alert">
+                Your package will be updated after 24 hours.
+            </div>
+        }
+
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Profile</h1>
+
+            <div>
+                <button class="btn btn-primary" @onclick="OpenCreateNewPostModal">New post</button>
+                <button class="btn btn-secondary" @onclick="OpenChangePackageModalAsync">Change package</button>
+            </div>
+        </div>
+
+
+        <hr class="mt-1 mb-3"/>
+
+        @if (User is not null)
+        {
+            <div class="row">
+                <div class="col-4">
+                    <div class="row">
+                        <h6 class="text-muted">ID</h6>
+                        <h5 class="fw-bold">@User.Id</h5>
+                    </div>
+                    <div class="row">
+                        <h6 class="text-muted">Username</h6>
+                        <h5 class="fw-bold">@User.Username</h5>
+                    </div>
+                </div>
+
+                <div class="col-4">
+                    <div class="row">
+                        <h6 class="text-muted">First name</h6>
+                        <h5 class="fw-bold">@User.FirstName</h5>
+                    </div>
+                    <div class="row-2">
+                        <h6 class="text-muted">Last name</h6>
+                        <h5 class="fw-bold">@User.LastName</h5>
+                    </div>
+                </div>
+
+                <div class="col-2">
+                    <div class="row">
+                        <h6 class="text-muted">Package</h6>
+                        <h5 class="fw-bold">@User.Package.Name</h5>
+                    </div>
+                    <div class="row">
+                        <h6 class="text-muted">Price</h6>
+                        <h5 class="fw-bold">@User.Package.Price</h5>
+                    </div>
+                </div>
+
+                <div class="col-2">
+                    <div class="row">
+                        <h6 class="text-muted">Allowed photos</h6>
+                        <h5 class="fw-bold">@(User.Package.PhotoUploadLimit == -1 ? "Unlimited" : User.Package.PhotoUploadLimit)</h5>
+                    </div>
+                    <div class="row">
+                        <h6 class="text-muted">Photo upload amount</h6>
+                        <h5 class="fw-bold">@(User.PhotoUploadAmount == -1 ? "Unlimited" : User.PhotoUploadAmount)</h5>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="mt-1 mb-3"/>
+
+            @if (Posts is not null)
+            {
+                if (Posts.Any())
+                {
+                    foreach (UserPostVm post in Posts)
+                    {
+                        <div class="column">
+                            <div class="card">
+                                <img src="@post.ImageUri" class="m-0" alt="Post" style="height: 400px; object-fit: cover;">
+
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        @post.Description
+                                    </p>
+
+                                    <div class="p-0 border-top">
+                                        <div class="d-flex justify-content-between my-2">
+                                            <span></span>
+                                            <span>@post.CreatedAt.Date.ToString("MMM dd, yyyy.")</span>
+                                        </div>
+                                        <div class="border-top pt-2">
+                                            @if (post.Hashtags is not null)
+                                            {
+                                                foreach (PostHashtagVm hashtag in post.Hashtags)
+                                                {
+                                                    <span class="badge bg-primary mx-1">#@hashtag.Text</span>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card-footer">
+                                    <div class="row p-0 mb-1">
+                                        <div class="col d-grid">
+                                            <button class="btn btn-primary" @onclick="() => OpenImageModal(post.ImageUri)">Show</button>
+                                        </div>
+                                        <div class="col d-grid">
+                                            <button class="btn btn-secondary" @onclick="() => DownloadPostImageAsync(User.Id, post.Id)">Download</button>
+                                        </div>
+                                    </div>
+                                    <div class="row p-0">
+                                        <div class="col d-grid">
+                                            <button class="btn btn-dark" @onclick="() => OpenUpdatePostModalAsync(post)">Update</button>
+                                        </div>
+                                        <div class="col d-grid">
+                                            <button class="btn btn-danger" @onclick="() => OpenDeletePostModalAsync(post.Id, post.ImageUri)">Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <hr class="mt-3 mb-1"/>
+
+                    <Pagination Metadata="@PaginationMetadata" Spread="2" SelectedPage="@SelectedPageAsync"/>
+                }
+                else
+                {
+                    <h3 class="text-center">No posts found</h3>
+                }
+            }
+        }
+    </div>
+</div>
+
+@code {
+
+    [Inject]
+    public IUserApiService UserApiService { get; set; } = default!;
+
+    [Inject]
+    private IPostApiService PostApiService { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime JsRuntime { get; set; } = default!;
+
+    [CascadingParameter]
+    private IModalService ModalService { get; set; } = default!;
+
+    private UserDetailsVm? User { get; set; }
+
+    private PaginationRequestDto PaginationRequestDto { get; } = new();
+
+    private List<UserPostVm>? Posts { get; set; }
+
+    private PaginationMetadata? PaginationMetadata { get; set; }
+
+    private bool ShowErrors { get; set; }
+
+    private List<string> Errors { get; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetCurrentUserDetailsAsync();
+        await GetCurrentUserPostsPaginatedAsync();
+    }
+
+    private async Task GetCurrentUserDetailsAsync()
+    {
+        ShowErrors = false;
+        Errors.Clear();
+
+        ResultResponseVm<UserDetailsVm> result = await UserApiService.GetCurrentUserDetailsAsync();
+
+        if (result.Success)
+        {
+            User = result.ObjectResult;
+
+            return;
+        }
+
+        User = new UserDetailsVm();
+        Errors.AddRange(result.Errors);
+        ShowErrors = false;
+    }
+
+    private async Task GetCurrentUserPostsPaginatedAsync()
+    {
+        ShowErrors = false;
+        Errors.Clear();
+
+        ResultResponseVm<PaginationResponseDto<UserPostVm>> result = await PostApiService
+            .GetPaginatedForUserDetailsAsync(PaginationRequestDto, User?.Id);
+
+        if (result.Success)
+        {
+            PaginationResponseDto<UserPostVm> paginationResponseDto = result.ObjectResult;
+
+            Posts = paginationResponseDto.Items;
+            PaginationMetadata = paginationResponseDto.Metadata;
+
+            return;
+        }
+
+        Posts = new List<UserPostVm>();
+        Errors.AddRange(result.Errors);
+        ShowErrors = false;
+    }
+
+    private async Task SelectedPageAsync(int page)
+    {
+        Posts = null;
+
+        PaginationRequestDto.PageNumber = page;
+        await GetCurrentUserPostsPaginatedAsync();
+    }
+
+    private async Task OpenCreateNewPostModal()
+    {
+        ModalResult modalResult = await ModalService.Show<CreateNewPostModal>(
+            string.Empty, new ModalOptions { Size = ModalSize.Medium }).Result;
+
+        if (!modalResult.Cancelled)
+        {
+            await GetCurrentUserDetailsAsync();
+            await GetCurrentUserPostsPaginatedAsync();
+        }
+    }
+
+    private async Task OpenChangePackageModalAsync()
+    {
+        ModalResult modalResult = await ModalService.Show<ChangePackageModal>(
+            string.Empty,
+            new ModalParameters()
+                .Add(nameof(ChangePackageModal.UserId), User!.Id)
+                .Add(nameof(ChangePackageModal.UserPackage), User!.Package),
+            new ModalOptions { Size = ModalSize.Medium }).Result;
+
+        if (!modalResult.Cancelled)
+        {
+            await GetCurrentUserDetailsAsync();
+        }
+    }
+
+    private void OpenImageModal(string imageUri)
+    {
+        ModalService.Show<ImageModal>(
+            string.Empty,
+            new ModalParameters()
+                .Add(nameof(ImageModal.ImageUri), imageUri));
+    }
+
+    private async Task DownloadPostImageAsync(string userId, Guid postId)
+    {
+        Tuple<Stream, string>? imageStream = await PostApiService.GetPostImageAsync(userId, postId);
+
+        if (imageStream is null)
+        {
+            return;
+        }
+
+        using DotNetStreamReference streamReference = new(imageStream.Item1);
+
+        string fileExtension = FileExtensionHelpers.GetFileExtension(imageStream.Item2);
+
+        await JsRuntime.InvokeVoidAsync("downloadPostImageFromStream", $"{postId}.{fileExtension}", streamReference);
+    }
+
+    private async Task OpenUpdatePostModalAsync(UserPostVm post)
+    {
+        ModalResult modalResult = await ModalService.Show<UpdatePostModal>(
+            string.Empty,
+            new ModalParameters()
+                .Add(nameof(UpdatePostModal.Post), post),
+            new ModalOptions { Size = ModalSize.Medium }).Result;
+
+        if (!modalResult.Cancelled)
+        {
+            await GetCurrentUserPostsPaginatedAsync();
+        }
+    }
+
+    private async Task OpenDeletePostModalAsync(Guid postId, string imageUri)
+    {
+        ModalResult modalResult = await ModalService.Show<DeletePostModal>(
+            string.Empty,
+            new ModalParameters()
+                .Add(nameof(DeletePostModal.ImageUri), imageUri)
+                .Add(nameof(DeletePostModal.PostId), postId),
+            new ModalOptions { Size = ModalSize.Medium }).Result;
+
+        if (!modalResult.Cancelled)
+        {
+            await GetCurrentUserDetailsAsync();
+            await GetCurrentUserPostsPaginatedAsync();
+        }
+    }
+
+}
