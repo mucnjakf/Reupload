@@ -5,27 +5,30 @@ Image Sharing Social Media Web Application - 2022.
 ---
 
 ### **Overview**
-Reupload is a web application for image sharing social media.
+Reupload is a image-sharing social media web application, designed to foster a community of creativity, inspiration, and connection. With Reupload, users can effortlessly share their favorite images, discover captivating content from other users.
 
 ---
 
 ### **Tech Stack**
-- .NET 6 - ASP.NET Core Web API
-- .NET 6 - ASP.NET Core Blazor WebAssembly
-- ASP.NET Core Identity
-- Entity Framework Core
-- Azure Storage
-- Hangfire
-- Blazored Modal
-- Bootstrap 5
-- Microsoft SQL Server
+- Frontend
+  - .NET 6 - ASP.NET Core Blazor WebAssembly
+  - Blazored Modal
+  - Bootstrap 5
+- Backend
+  - .NET 6 - ASP.NET Core Web API
+  - ASP.NET Core Identity
+  - Entity Framework Core
+  - Azure Storage
+  - Hangfire
+- Database
+  - Microsoft SQL Server
 
 ---
 
 ### **Tools**
-- Source Control: JetBrains Space
+- Source Control: GitHub
 - IDE: Rider
-- API Tester: Postman
+- API Client: Postman
 - RDBMS: DataGrip
 
 ---
