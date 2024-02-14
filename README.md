@@ -1,15 +1,15 @@
-# Reupload
+# <img src="reupload.png" width="25"/> Reupload
 
+### **👁️ Overview**
 Image Sharing Social Media Web Application - 2022.
 
----
+<p align="justify">
+  Reupload is a image-sharing social media web application, designed to foster a community of creativity, inspiration, and connection. With Reupload, users can effortlessly share their favorite images, discover captivating content from other users.
+</p>
 
-### **Overview**
-Reupload is a image-sharing social media web application, designed to foster a community of creativity, inspiration, and connection. With Reupload, users can effortlessly share their favorite images, discover captivating content from other users.
+#
 
----
-
-### **Tech Stack**
+### **⚙️ Tech Stack**
 - Frontend
   - .NET 6 - ASP.NET Core Blazor WebAssembly
   - Blazored Modal
@@ -23,12 +23,10 @@ Reupload is a image-sharing social media web application, designed to foster a c
 - Database
   - Microsoft SQL Server
 
----
+#
 
-### **Tools**
+### **🛠️ Tools**
 - Source Control: GitHub
 - IDE: Rider
 - API Client: Postman
 - RDBMS: DataGrip
-
----
