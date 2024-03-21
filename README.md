@@ -1,4 +1,4 @@
-# <img src="reupload.png" width="25"/> Reupload
+# <img src="reupload.svg" width="25"/> Reupload
 
 ### **👁️ Overview**
 Image Sharing Social Media Web Application - 2022.
