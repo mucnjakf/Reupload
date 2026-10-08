@@ -4,7 +4,7 @@
 Image Sharing Social Media Web Application - 2022.
 
 <p align="justify">
-  Reupload is a image-sharing social media web application, designed to foster a community of creativity, inspiration, and connection. With Reupload, users can effortlessly share their favorite images, discover captivating content from other users.
+  Reupload is a image-sharing social media web application, designed to foster a community of creativity, inspiration, and connection. With Reupload, users can effortlessly share their favorite images, discover captivating visuals from others, and engage with a vibrant community of image enthusiasts.
 </p>
 
 #
@@ -22,11 +22,3 @@ Image Sharing Social Media Web Application - 2022.
   - Hangfire
 - Database
   - Microsoft SQL Server
-
-#
-
-### **🛠️ Tools**
-- Source Control: GitHub
-- IDE: Rider
-- API Client: Postman
-- RDBMS: DataGrip
